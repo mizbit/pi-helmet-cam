@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Recording script for a Raspberry Pi powered motorcycle helmet camera.
 """
 
@@ -10,7 +12,7 @@ import subprocess
 import logging
 
 
-VIDEODIR = 'video'
+VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
 FILETYPE = 'h264'
 
 # how many 0s to put in front of counter number

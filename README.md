@@ -1,11 +1,11 @@
 # pi-helmet-cam
-Software for a Raspberry Pi Zero W motorcycle helmet camera
+Software for a Raspberry Pi Zero W motorcycle helmet camera.
 
 ## Necessary Hardware
 
 - Raspberry Pi
   - Zero/Zero Wireless ideally
-- Raspberry Pi camera 
+- Raspberry Pi camera
   - an offical Raspberry Pi camera is a safe bet
   - with correct ribbon cable (Zero cable is different than full sized Pi's, also should get at least 6" long)
 - MicroSD card
@@ -15,11 +15,6 @@ Software for a Raspberry Pi Zero W motorcycle helmet camera
 - Camera housing/mounting
   - I made mine out of plexiglass, superglue, and electrical tape for waterproofing with a dremel
   - Electrical tape or double sided adhesive pads for mounting camera+Pi to the helmet
-- You might also need for setup/troubleshooting
-  - Monitor/TV
-  - USB keyboard
-  - Adapter for mini HDMI -> HDMI or whatever your monitor/TV takes
-  - Adapter for microUSB -> USB for a keyboard so you can set up Raspbian
 
 ## Setup Instructions
 
@@ -31,7 +26,7 @@ Found in the main Google Doc for this project: https://docs.google.com/document/
 
 (run `sudo crontab -e` and add this line to the bottom)
 
-    @reboot sh /home/pi/pi-helmet-cam/boot_script.sh >/home/pi/pi-helmet-cam/cronlog 2>&1
+    @reboot /home/pi/pi-helmet-cam/camera.py >/home/pi/pi-helmet-cam/cronlog 2>&1
 
 - NOTE: depending on what your username is/where you put this repo you may need to change the path
 - If you're running into problems starting the script on boot, check `./cronlog`.
@@ -43,20 +38,6 @@ Found in the main Google Doc for this project: https://docs.google.com/document/
 
 - Python script that begins recording video in chunks when started using picamera Python module
 - Use `-d` or `--debug` to see video preview and debug print statements
-
-#### `boot_script.sh`
-
-- clears out old videos if we need the space
-- then starts recording
-- crontab runs this on startup
-
-#### `clear_videos.sh`
-
-- helpful script to just clean out old video from the `video` directory
-
-#### `kill_process.sh`
-
-- kill all running python processes, quick way to stop the script if running in background
 
 #### `video/`
 - the Python script will create a `video` directory to store videos in
