@@ -74,7 +74,7 @@ def generate_filename(videodir, timestamp, counter, filetype):
   filename_prefix = '{}/{}'.format(videodir, timestamp)
   if not os.path.isdir(filename_prefix):
     logging.debug('Creating directory %s', filename_prefix)
-    os.mkdirs(filename_prefix)
+    os.makedirs(filename_prefix)
   zfill_counter = str(counter).zfill(ZFILL_DECIMAL)
   filename = '{}/{}-{}.{}'.format(filename_prefix, timestamp, zfill_counter, filetype)
   logging.debug('Recording %s', filename)
