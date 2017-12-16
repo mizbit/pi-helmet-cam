@@ -1,126 +1,116 @@
+"""Recording script for a Raspberry Pi powered motorcycle helmet camera.
 """
-recording script for a Raspberry Pi powered motorcycle helmet camera
-"""
 
-from picamera import PiCamera
-from datetime import datetime
-from os import mkdir, listdir
-from os.path import isdir
-from shutil import rmtree
-from sys import exit, argv
-from subprocess import Popen, PIPE
+import picamera
+import datetime
+import os
+import shutil
+import sys
+import subprocess
+import logging
 
 
-# to specify lines not to run during actual use
-debug = False
-
-videodir = 'video'
-filetype = 'h264'
+VIDEODIR = 'video'
+FILETYPE = 'h264'
 
 # how many 0s to put in front of counter number
-# will start to screw up when video has passed (interval)*10^(zfill_decimal) seconds in length
-zfill_decimal = 6
+# will start to screw up when video has passed (INTERVAL)*10^(ZFILL_DECIMAL) seconds in length
+ZFILL_DECIMAL = 6
 
 # best settings for 5mp V1 camera
 # (pixel width, height)
-# resolution = (1296, 972)
-# framerate = 30
+# RESOLUTION = (1296, 972)
+# FRAMERATE = 30
 
 # 8mp V2 camera
-resolution = (1640, 1232)
-framerate = 30
+RESOLUTION = (1640, 1232)
+FRAMERATE = 30
 
 # number of seconds to film each video
-interval = 5
+INTERVAL = 5
 
 # check for enough disk space every (this many) of above intervals
-space_check_interval = 100
+SPACE_CHECK_INTERVAL = 100
 
 # what % of disk space must be free to start a new video
-required_free_space_percent = 15  # about an hour with 64gb card
+REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
 
 
 def make_room(videodir):
-  """ clear oldest video """
-  sorted_videos = sorted(listdir(videodir))
+  """Clear oldest video.
+  """
+  sorted_videos = sorted(os.listdir(videodir))
   if sorted_videos:
     oldest_video = sorted_videos[0]
-  if debug:
-    print 'Removing oldest video: {}'.format(oldest_video)
+    logging.dedbug('Removing oldest video: %s', oldest_video)
     # may not have permission if running as pi and video was created by root
     try:
-      rmtree('{}/{}'.format(videodir, oldest_video))
-    except OSError as e:
-      print 'ERROR, must run as root otherwise script cannot clear out old videos'
+      shutil.rmtree('{}/{}'.format(videodir, oldest_video))
+    except OSError:
+      logging.error('Must run as root otherwise script cannot clear out old videos')
       exit(1)
   else:
-    if debug:
-      print 'No videos in directory {}, cannot make room'.format(videodir)
+    logging.debug('No videos in directory %s, cannot make room', videodir)
 
 
 def enough_disk_space(required_free_space_percent):
-  """ return true if we have enough space to start a new video """
-  df = Popen(["df", "/"], stdout=PIPE)
+  """Return true if we have enough space to start a new video.
+  """
+  df = subprocess.Popen(['df', '/'], stdout=subprocess.PIPE)
   output = df.communicate()[0]
   percent_used_str = output.split("\n")[1].split()[4]
   percent_used = int(percent_used_str.replace('%', ''))
-  if debug:
-    print '{}% of disk space used.'.format(percent_used)
+  logging.debug('%s%% of disk space used.', percent_used)
   enough = 100 >= required_free_space_percent + percent_used
-  if debug:
-    print 'Enough space to start new video: {}'.format(enough)
+  logging.debug('Enough space to start new video: %s', enough)
   return enough
 
 
 def generate_filename(videodir, timestamp, counter, filetype):
-  """ going to look like: 2017-03-08-09-54-27.334326-000001.h264 """
+  """Going to look like: 2017-03-08-09-54-27.334326-000001.h264.
+  """
   filename_prefix = '{}/{}'.format(videodir, timestamp)
-  if not isdir(filename_prefix):
-    if debug:
-      print 'Creating directory {}'.format(filename_prefix)
-    mkdir(filename_prefix)
-  zfill_counter = str(counter).zfill(zfill_decimal)
+  if not os.path.isdir(filename_prefix):
+    logging.debug('Creating directory %s', filename_prefix)
+    os.mkdir(filename_prefix)
+  zfill_counter = str(counter).zfill(ZFILL_DECIMAL)
   filename = '{}/{}-{}.{}'.format(filename_prefix, timestamp, zfill_counter, filetype)
-  if debug:
-    print 'Recording {}'.format(filename)
+  logging.debug('Recording %s', filename)
   return filename
 
 
 def continuous_record(camera, videodir, timestamp, filetype, interval):
-  """ record <interval> second files with prefix """
+  """Record <interval> second files with prefix.
+  """
   counter = 0
-  if debug:
-    camera.start_preview()
   initial_filename = generate_filename(videodir, timestamp, counter, filetype)
-  camera.start_recording(initial_filename, intra_period=interval * framerate)
-  while(True):
+  camera.start_recording(initial_filename, intra_period=interval * FRAMERATE)
+  while True:
     counter += 1
     split_filename = generate_filename(videodir, timestamp, counter, filetype)
     camera.split_recording(split_filename)
     camera.wait_recording(interval)
-    if counter % space_check_interval == 0:
-      while not enough_disk_space(required_free_space_percent):
+    if counter % SPACE_CHECK_INTERVAL == 0:
+      while not enough_disk_space(REQUIRED_FREE_SPACE_PERCENT):
         make_room(videodir)
   camera.stop_recording()
-  if debug:
-    camera.stop_preview()
 
 
 def main():
-  with PiCamera() as camera:
+  with picamera.PiCamera() as camera:
     # Initialization
-    camera.resolution = resolution
-    camera.framerate = framerate
-    timestamp = str(datetime.now()).replace(' ', '-').replace(':', '-')
-    while not enough_disk_space(required_free_space_percent):
-      make_room(videodir)
+    camera.resolution = RESOLUTION
+    camera.framerate = FRAMERATE
+    timestamp = str(datetime.datetime.now()).replace(' ', '-').replace(':', '-')
+    while not enough_disk_space(REQUIRED_FREE_SPACE_PERCENT):
+      make_room(VIDEODIR)
 
     # start recording, chunking files every <interval> seconds
-    continuous_record(camera, videodir, timestamp, filetype, interval)
+    continuous_record(camera, VIDEODIR, timestamp, FILETYPE, INTERVAL)
 
 
-if __name__ == "__main__":
-  if len(argv) > 1:
-    if argv[1] == '-d' or argv[1] == '--debug':
-      debug = True
+if __name__ == '__main__':
+  if len(sys.argv) > 1:
+    if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
+      logging.basicConfig(level=logging.DEBUG)
   main()
