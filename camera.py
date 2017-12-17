@@ -73,7 +73,7 @@ def watch():
     time.sleep(SPACE_CHECK_INTERVAL)
 
 
-class OutputFile(object):
+class OutputShard(object):
   def __init__(self, filename):
     self.filename = filename
     self.stream = open(filename, 'ab')
@@ -90,6 +90,9 @@ class OutputFile(object):
 
 
 def main():
+  p = multiprocessing.Process(target=watch)
+  logging.debug('Starting background process %s', p)
+  p.start()
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
@@ -100,19 +103,17 @@ def main():
     if not os.path.isdir(VIDEODIR):
       logging.debug('Creating directory %s', VIDEODIR)
       os.mkdir(VIDEODIR)
-    filename = os.path.join(VIDEODIR, '%s.%s' % (timestamp, FORMAT))
-    output = OutputFile(filename)
-    camera.start_recording(output, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
+    filename = os.path.join(VIDEODIR, '%s.{}.%s' % (timestamp, FORMAT))
+    shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
+    camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     while True:
       camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-      camera.split_recording(output)
+      camera.split_recording(shard)
       camera.wait_recording(INTERVAL)
-      if output.size > MAX_VIDEO_SIZE:
-        filename = os.path.join(VIDEODIR, '%s.%s.%s' % (
-          timestamp, str(counter).zfill(ZFILL_DECIMAL), FORMAT))
-        logging.debug('Starting new video file: %s', filename)
+      if shard.size > MAX_VIDEO_SIZE:
         counter += 1
-      output = OutputFile(filename)
+        logging.debug('Using next shard %s for video file', counter)
+      shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
 
 
 if __name__ == '__main__':
@@ -120,13 +121,7 @@ if __name__ == '__main__':
     if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
       logging.basicConfig(level=logging.DEBUG)
 
-  p = multiprocessing.Process(target=watch)
-  logging.debug('Starting background process %s', p)
-  p.start()
-
   try:
-    logging.debug('Starting recording...')
     main()
   except KeyboardInterrupt:
-    p.terminate()
     exit('Command killed by keyboard interrupt')
