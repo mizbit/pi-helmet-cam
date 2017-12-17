@@ -10,29 +10,26 @@ import shutil
 import sys
 import subprocess
 import logging
+import time
+import multiprocessing
 
 
 VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
-FILETYPE = 'h264'
+FORMAT = 'h264'
+MAX_VIDEO_SIZE = 50 * (10 ** 6)
 
 # how many 0s to put in front of counter number
-# will start to screw up when video has passed (INTERVAL)*10^(ZFILL_DECIMAL) seconds in length
-ZFILL_DECIMAL = 6
-
-# best settings for 5mp V1 camera
-# (pixel width, height)
-# RESOLUTION = (1296, 972)
-# FRAMERATE = 30
+ZFILL_DECIMAL = 3
 
 # 8mp V2 camera
 RESOLUTION = (1640, 1232)
 FRAMERATE = 30
 
-# number of seconds to film each video
-INTERVAL = 5
+# number of seconds to flush on disk
+INTERVAL = 1
 
-# check for enough disk space every (this many) of above intervals
-SPACE_CHECK_INTERVAL = 100
+# check for enough disk space every N seconds
+SPACE_CHECK_INTERVAL = 30
 
 # what % of disk space must be free to start a new video
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
@@ -44,7 +41,7 @@ def make_room():
   sorted_videos = sorted(os.listdir(VIDEODIR))
   if sorted_videos:
     oldest_video = sorted_videos[0]
-    logging.dedbug('Removing oldest video: %s', oldest_video)
+    logging.debug('Removing oldest video: %s', oldest_video)
     # may not have permission if running as pi and video was created by root
     try:
       shutil.rmtree('{}/{}'.format(VIDEODIR, oldest_video))
@@ -68,53 +65,65 @@ def enough_disk_space():
   return enough
 
 
-def generate_filename(timestamp, counter, filetype):
-  """Going to look like: 2017-03-08-09-54-27.334326-000001.h264.
-  """
-  filename_prefix = '{}/{}'.format(VIDEODIR, timestamp)
-  if not os.path.isdir(filename_prefix):
-    logging.debug('Creating directory %s', filename_prefix)
-    os.makedirs(filename_prefix)
-  zfill_counter = str(counter).zfill(ZFILL_DECIMAL)
-  filename = '{}/{}-{}.{}'.format(filename_prefix, timestamp, zfill_counter, filetype)
-  logging.debug('Recording %s', filename)
-  return filename
-
-
-def continuous_record(camera, timestamp, filetype, interval):
-  """Record <interval> second files with prefix.
-  """
-  counter = 0
-  initial_filename = generate_filename(timestamp, counter, filetype)
-  camera.start_recording(initial_filename, intra_period=interval * FRAMERATE)
+def watch():
   while True:
-    counter += 1
-    split_filename = generate_filename(timestamp, counter, filetype)
-    camera.split_recording(split_filename)
-    camera.wait_recording(interval)
-    if counter % SPACE_CHECK_INTERVAL == 0:
-      while not enough_disk_space():
-        make_room()
-  camera.stop_recording()
+    while not enough_disk_space():
+      make_room()
+    # TODO: check for wifi, try to upload
+    time.sleep(SPACE_CHECK_INTERVAL)
+
+
+class OutputFile(object):
+  def __init__(self, filename):
+    self.filename = filename
+    self.stream = open(filename, 'ab')
+
+  def write(self, buf):
+    self.stream.write(buf)
+
+  def close(self):
+    self.stream.close()
+
+  @property
+  def size(self):
+    return os.stat(self.filename).st_size
 
 
 def main():
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
-    timestamp = str(datetime.datetime.now()).replace(' ', '-').replace(':', '-')
-    while not enough_disk_space():
-      make_room()
-
-    # start recording, chunking files every <interval> seconds
-    continuous_record(camera, timestamp, FILETYPE, INTERVAL)
+    camera.annotate_background = picamera.Color('black')
+    counter = 0
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    if not os.path.isdir(VIDEODIR):
+      logging.debug('Creating directory %s', VIDEODIR)
+      os.mkdir(VIDEODIR)
+    filename = os.path.join(VIDEODIR, '%s.%s' % (timestamp, FORMAT))
+    output = OutputFile(filename)
+    camera.start_recording(output, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
+    while True:
+      camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+      camera.split_recording(output)
+      camera.wait_recording(INTERVAL)
+      if output.size > MAX_VIDEO_SIZE:
+        filename = os.path.join(VIDEODIR, '%s.%s.%s' % (
+          timestamp, str(counter).zfill(ZFILL_DECIMAL), FORMAT))
+        logging.debug('Starting new video file: %s', filename)
+        counter += 1
+      output = OutputFile(filename)
 
 
 if __name__ == '__main__':
   if len(sys.argv) > 1:
     if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
       logging.basicConfig(level=logging.DEBUG)
+
+  p = multiprocessing.Process(target=watch)
+  p.start()
+
   try:
     main()
   except KeyboardInterrupt:
+    p.terminate()
     exit('Command killed by keyboard interrupt')
