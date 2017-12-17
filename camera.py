@@ -93,6 +93,7 @@ def main():
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
+    logging.debug('Recording with %s@%s FPS', RESOLUTION, FRAMERATE)
     camera.annotate_background = picamera.Color('black')
     counter = 0
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -120,9 +121,11 @@ if __name__ == '__main__':
       logging.basicConfig(level=logging.DEBUG)
 
   p = multiprocessing.Process(target=watch)
+  logging.debug('Starting background process %s', p)
   p.start()
 
   try:
+    logging.debug('Starting recording...')
     main()
   except KeyboardInterrupt:
     p.terminate()

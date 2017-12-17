@@ -26,7 +26,7 @@ Found in the main Google Doc for this project: https://docs.google.com/document/
 
 (run `sudo crontab -e` and add this line to the bottom)
 
-    @reboot /home/pi/pi-helmet-cam/camera.py >/home/pi/pi-helmet-cam/cronlog 2>&1
+    @reboot /home/pi/pi-helmet-cam/camera.py > /home/pi/pi-helmet-cam/cronlog 2>&1
 
 - NOTE: depending on what your username is/where you put this repo you may need to change the path
 - If you're running into problems starting the script on boot, check `./cronlog`.
