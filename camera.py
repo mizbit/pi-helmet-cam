@@ -18,6 +18,9 @@ from googleapiclient.http import MediaFileUpload
 import httplib2
 
 
+logging.getLogger('googleapiclient.discovery').setLevel(logging.CRITICAL)
+logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.CRITICAL)
+
 VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
 CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
@@ -83,7 +86,7 @@ def upload(filename):
   except IOError:
     logging.error('Unable to read .credentials file to perform youtube upload.')
     return
-  service = build('youtube', 'v3', credentials=credentials)
+  service = build('youtube', 'v3', credentials=credentials, cache_discovery=False)
   body = dict(snippet=dict(title=filename, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
   logging.debug('Preparing to upload %s...', filename)
