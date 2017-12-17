@@ -38,6 +38,8 @@ SPACE_CHECK_INTERVAL = 60
 # what % of disk space must be free to start a new video
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
 
+queue = []
+
 
 def make_room():
   """Clear oldest video.
@@ -48,7 +50,7 @@ def make_room():
     logging.debug('Removing oldest video: %s', oldest_video)
     # may not have permission if running as pi and video was created by root
     try:
-      shutil.rmtree('{}/{}'.format(VIDEODIR, oldest_video))
+      shutil.rmtree(os.path.join(VIDEODIR, oldest_video))
     except OSError:
       logging.error('Must run as root otherwise script cannot clear out old videos')
       exit(1)
@@ -93,10 +95,24 @@ def upload(filename):
 
 
 def watch():
+  """Background watcher which removes old videos and tries to perform an upload.
+
+  Will try to upload all but the last video, since we are still recording it.
+  """
   while True:
     while not enough_disk_space():
       make_room()
-    # TODO: check for wifi, try to upload
+    for i in reversed([i for i, p in enumerate(queue) if not p.is_alive()]):
+      queue.pop(i)
+    logging.debug('Upload queue: %s', queue)
+    for video in sorted(os.listdir(VIDEODIR))[:-1]:
+      filename = os.path.join(VIDEODIR, video)
+      if filename in [i.name for i in queue]:
+        continue
+      p = multiprocessing.Process(target=upload, name=filename, args=[filename])
+      logging.debug('Starting background process %s', p)
+      p.start()
+      queue.append(p)
     time.sleep(SPACE_CHECK_INTERVAL)
 
 
