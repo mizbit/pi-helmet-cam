@@ -93,7 +93,7 @@ def upload(filename):
     media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
   ).execute()
   logging.debug('Successfully uploaded %s', result)
-  shutil.rmtree(filename)
+  os.remove(filename)
 
 
 def watch():
