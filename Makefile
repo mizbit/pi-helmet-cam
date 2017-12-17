@@ -1,7 +1,7 @@
 .PHONY : all credentials
 
 all:
-	sudo pip install picamera google_auth_oauthlib google-api-python-client
+	sudo pip install picamera google_auth_oauthlib google-api-python-client google-auth-httplib2
 	make credentials
 
 credentials:
