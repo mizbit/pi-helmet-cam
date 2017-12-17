@@ -11,7 +11,11 @@ import sys
 import subprocess
 import logging
 import time
+import pickle
 import multiprocessing
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+import httplib2
 
 
 VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
@@ -29,7 +33,7 @@ FRAMERATE = 30
 INTERVAL = 1
 
 # check for enough disk space every N seconds
-SPACE_CHECK_INTERVAL = 30
+SPACE_CHECK_INTERVAL = 60
 
 # what % of disk space must be free to start a new video
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
@@ -63,6 +67,29 @@ def enough_disk_space():
   enough = 100 >= REQUIRED_FREE_SPACE_PERCENT + percent_used
   logging.debug('Enough space to start new video: %s', enough)
   return enough
+
+
+def upload(filename):
+  """Upload given filename on YouTube using saved credentials.
+
+  Raises:
+    httplib2.ServerNotFoundError: When no connection is available.
+  """
+  try:
+    credentials = pickle.load(open('.credentials'))
+  except IOError:
+    logging.error('Unable to read .credentials file to perform youtube upload.')
+    return
+  service = build('youtube', 'v3', credentials=credentials)
+  body = dict(snippet=dict(title=filename, tags=['helmet'], categoryId=2),
+              status=dict(privacyStatus='unlisted'))
+  logging.debug('Preparing to upload %s...', filename)
+  result = service.videos().insert(
+    part=','.join(body.keys()),
+    body=body,
+    media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
+  ).execute()
+  logging.debug('Successfully uploaded %s', result)
 
 
 def watch():
