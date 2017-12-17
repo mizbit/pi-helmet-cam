@@ -19,6 +19,7 @@ import httplib2
 
 
 VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
+CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
 MAX_VIDEO_SIZE = 500 * (10 ** 6)
 
@@ -78,7 +79,7 @@ def upload(filename):
     httplib2.ServerNotFoundError: When no connection is available.
   """
   try:
-    credentials = pickle.load(open('.credentials'))
+    credentials = pickle.load(open(CREDENTIALS))
   except IOError:
     logging.error('Unable to read .credentials file to perform youtube upload.')
     return
