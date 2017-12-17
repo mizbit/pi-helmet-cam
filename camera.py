@@ -16,7 +16,7 @@ import multiprocessing
 
 VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
 FORMAT = 'h264'
-MAX_VIDEO_SIZE = 50 * (10 ** 6)
+MAX_VIDEO_SIZE = 500 * (10 ** 6)
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
