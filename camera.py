@@ -98,7 +98,7 @@ def upload(filename):
       media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
     ).execute()
   except httplib2.ServerNotFoundError:
-    logging.debug('Couldn\'t upload %s since to connection is available.')
+    logging.debug('Couldn\'t upload %s since no connection is available.')
   else:
     logging.debug('Successfully uploaded %s', result)
     os.remove(filename)
