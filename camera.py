@@ -4,7 +4,6 @@
 """
 
 import os
-import picamera
 import datetime
 import shutil
 import subprocess
@@ -15,11 +14,15 @@ import multiprocessing
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import httplib2
-
+import functools
+import socket
+try:
+  import picamera
+except ImportError:
+  print('Couldn\'t import picamera: running as is for debug purposes.')
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
                     level=logging.DEBUG)
-
 logging.getLogger('googleapiclient.discovery').setLevel(logging.CRITICAL)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.CRITICAL)
 
@@ -46,6 +49,46 @@ SPACE_CHECK_INTERVAL = 60
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
 
 queue = []
+
+
+class throttle(object):
+  """Decorator that prevents a function from being called more than once every
+  time period.
+
+  To create a function that cannot be called more than once a minute:
+    @throttle(minutes=1)
+    def my_fun():
+      pass
+  """
+  def __init__(self, seconds=0, minutes=0, hours=0):
+    self.throttle_period = datetime.timedelta(
+      seconds=seconds, minutes=minutes, hours=hours)
+    self.time_of_last_call = datetime.datetime.min
+
+  def __call__(self, fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+      now = datetime.datetime.now()
+      time_since_last_call = now - self.time_of_last_call
+      if time_since_last_call > self.throttle_period:
+        self.time_of_last_call = now
+        self.last_result = fn(*args, **kwargs)
+        return self.last_result
+      else:
+        return self.last_result
+    return wrapper
+
+
+@throttle(seconds=5)
+def is_connected(host='8.8.8.8', port=53, timeout=1):
+  """Returns True if we have internet connection.
+  """
+  try:
+    socket.setdefaulttimeout(timeout)
+    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+    return True
+  except socket.error:
+    return False
 
 
 def make_room():
@@ -117,14 +160,16 @@ def watch():
     for i in reversed([i for i, p in enumerate(queue) if not p.is_alive()]):
       queue.pop(i)
     logging.debug('Upload queue: %s', queue)
-    for video in sorted(os.listdir(VIDEODIR))[:-1]:
-      filename = os.path.join(VIDEODIR, video)
-      if filename in [i.name for i in queue]:
-        continue
-      p = multiprocessing.Process(target=upload, name=filename, args=[filename])
-      logging.debug('Starting background process %s', p)
-      p.start()
-      queue.append(p)
+
+    if is_connected():
+      for video in sorted(os.listdir(VIDEODIR))[:-1]:
+        filename = os.path.join(VIDEODIR, video)
+        if filename in [i.name for i in queue]:
+          continue
+        p = multiprocessing.Process(target=upload, name=filename, args=[filename])
+        logging.debug('Starting background process %s', p)
+        p.start()
+        queue.append(p)
     time.sleep(SPACE_CHECK_INTERVAL)
 
 
@@ -144,13 +189,12 @@ class OutputShard(object):
     return os.stat(self.filename).st_size
 
 
-def main():
-  if not os.path.isdir(VIDEODIR):
-    logging.debug('Creating directory %s', VIDEODIR)
-    os.mkdir(VIDEODIR)
-  p = multiprocessing.Process(target=watch)
-  logging.debug('Starting background process %s', p)
-  p.start()
+def record():
+  """Start recording after no connection is avilable and stop when connected.
+  """
+  while is_connected():
+    logging.debug('Still connected...')
+    time.sleep(5)
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
@@ -163,8 +207,6 @@ def main():
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     while True:
-      # TODO: try to stop recording when uploading is in progress.
-      # this way we could easily upload videos from home
       camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
       camera.split_recording(shard)
       camera.wait_recording(INTERVAL)
@@ -172,6 +214,23 @@ def main():
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
       shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
+      if is_connected():
+        logging.info('Connected to WiFi. Not recording anymore.')
+        camera.stop_recording()
+        shard.close()
+        break
+  logging.info('Trying to start recording again...')
+  record()
+
+
+def main():
+  if not os.path.isdir(VIDEODIR):
+    logging.debug('Creating directory %s', VIDEODIR)
+    os.mkdir(VIDEODIR)
+  p = multiprocessing.Process(target=watch)
+  logging.debug('Starting background process %s', p)
+  p.start()
+  record()
 
 
 if __name__ == '__main__':
