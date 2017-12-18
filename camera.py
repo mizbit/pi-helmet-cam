@@ -32,6 +32,7 @@ ZFILL_DECIMAL = 3
 # 8mp V2 camera
 RESOLUTION = (1640, 1232)
 FRAMERATE = 30
+STABILIZATION = False
 
 # number of seconds to flush on disk
 INTERVAL = 1
@@ -151,6 +152,7 @@ def main():
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
+    camera.video_stabilization = STABILIZATION
     logging.debug('Recording with %s@%s FPS', RESOLUTION, FRAMERATE)
     camera.annotate_background = picamera.Color('black')
     counter = 0
