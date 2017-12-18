@@ -101,10 +101,12 @@ def is_connected(host='8.8.8.8', port=53, timeout=1):
   try:
     socket.setdefaulttimeout(timeout)
     socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
-    socket.setdefaulttimeout(None)
-    return True
+    result = True
   except socket.error:
-    return False
+    result = False
+  finally:
+    socket.setdefaulttimeout(None)
+    return result
 
 
 def make_room():
