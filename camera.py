@@ -152,8 +152,6 @@ def upload(filename):
 
 def watch():
   """Background watcher which removes old videos and tries to perform an upload.
-
-  Will try to upload all but the last video, since we are still recording it.
   """
   while True:
     while not enough_disk_space():
