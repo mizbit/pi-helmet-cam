@@ -42,7 +42,7 @@ VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
 CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
 MAX_VIDEO_SIZE = 500 * (10 ** 6)
-MIN_VIDEO_SIZE = 10 * (10 ** 6)
+MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
