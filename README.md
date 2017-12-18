@@ -1,6 +1,8 @@
 # pi-helmet-cam
 Software for a Raspberry Pi Zero W motorcycle helmet camera.
 
+Automatically starts recording when powered on, removing old videos if necessary, and uploads everything on youtube when network is available.
+
 ## Necessary Hardware
 
 - Raspberry Pi
@@ -11,40 +13,27 @@ Software for a Raspberry Pi Zero W motorcycle helmet camera.
 - MicroSD card
   - get one of the 'high endurance' ones since this will be writing HD video constantly
 - Battery
-  - Simplest solution is a smartphone external battery pack with a microUSB cable, and just keep it in your jacket
+  - Simplest solution is a smartphone external battery pack with a microUSB cable (magnetic is the best option)
 - Camera housing/mounting
-  - I made mine out of plexiglass, superglue, and electrical tape for waterproofing with a dremel
-  - Electrical tape or double sided adhesive pads for mounting camera+Pi to the helmet
+  - Cover both raspberry and camera with epoxy to make them resistant to water with electrical tape on top of it
+  - Velcro straps to secure the camera module
+  - Electrical tape for mounting raspberry to the helmet
 
 ## Setup Instructions
 
-#### Set up Raspberry Pi, camera, and mounting
+#### Set up Raspberry Pi (headless)
 
-Found in the main Google Doc for this project: https://docs.google.com/document/d/1HNO4g3zqxcsHzVkxqeB1x39abU7UEovlvAk7Gv2QWl4/edit?usp=sharing
-
-#### cronjob for recording on boot up:
-
-(run `sudo crontab -e` and add this line to the bottom)
+- Download [Rasbian Lite](https://downloads.raspberrypi.org/raspbian_lite_latest) and use [etcher](https://etcher.io/) to install it on an SD Card
+- Create empty `ssh` file on boot partition created above to allow SSH access
+- Configure and copy `wpa_supplicant.conf` file to setup wireless network
+- Plugin the card and you should be ready to connect by e.g. `ssh pi@192.168.1.4` (lookup the IP using `arp -a` or something) with default password being `raspberry`
+- Use `sudo raspi-config` to enable camera interface and change your password
+- Clone this repo
+- Generate `client_secret.json` from [Google Cloud Console](https://console.cloud.google.com/apis/credentials/oauthclient) (select 'Other' as application type) and click download JSON
+- Copy `client_secret.json` onto your raspberry in project folder
+- Run `make` from project folder – this will install dependencies and generate credentials based on your app secrets
+- Run `sudo crontab -e` and add this line to the bottom:
 
     @reboot /home/pi/pi-helmet-cam/camera.py > /home/pi/pi-helmet-cam/cron.log 2>&1
 
-- NOTE: depending on what your username is/where you put this repo you may need to change the path
-- If you're running into problems starting the script on boot, check `./cronlog`.
-
-
-## Files
-
-#### `camera.py`
-
-- Python script that begins recording video in chunks when started using picamera Python module
-- Use `-d` or `--debug` to see video preview and debug print statements
-
-#### `video/`
-- the Python script will create a `video` directory to store videos in
-- each video will have its own directory, the name being a current timestamp
-- inside this, there will be 5 second clips with the form `<timestamp>-000001.h264`
-- protip: when you move this directory to your laptop/desktop, you can select all files and open them with VLC or similar and they'll play in order
-- TODO: have script automatically merge the files after recording
-
-#### `cronlog`
-- where logs from starting the script on boot with `cronjob` will go
+You can check `cron.log` (latest session only) or `camera.log` (full history) for troubleshooting.
