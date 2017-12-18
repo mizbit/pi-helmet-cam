@@ -43,7 +43,7 @@ STABILIZATION = False
 INTERVAL = 1
 
 # check for enough disk space every N seconds
-SPACE_CHECK_INTERVAL = 60
+SPACE_CHECK_INTERVAL = 30
 
 # what % of disk space must be free to start a new video
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
