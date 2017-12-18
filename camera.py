@@ -162,7 +162,7 @@ def watch():
     logging.debug('Upload queue: %s', queue)
 
     if is_connected():
-      for video in sorted(os.listdir(VIDEODIR))[:-1]:
+      for video in sorted(os.listdir(VIDEODIR)):
         filename = os.path.join(VIDEODIR, video)
         if filename in [i.name for i in queue]:
           continue
