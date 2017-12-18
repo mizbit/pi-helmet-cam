@@ -138,6 +138,9 @@ class OutputShard(object):
 
 
 def main():
+  if not os.path.isdir(VIDEODIR):
+    logging.debug('Creating directory %s', VIDEODIR)
+    os.mkdir(VIDEODIR)
   p = multiprocessing.Process(target=watch)
   logging.debug('Starting background process %s', p)
   p.start()
@@ -148,9 +151,6 @@ def main():
     camera.annotate_background = picamera.Color('black')
     counter = 0
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    if not os.path.isdir(VIDEODIR):
-      logging.debug('Creating directory %s', VIDEODIR)
-      os.mkdir(VIDEODIR)
     filename = os.path.join(VIDEODIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
