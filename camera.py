@@ -8,6 +8,7 @@ import datetime
 import shutil
 import subprocess
 import logging
+import logging.handlers
 import time
 import pickle
 import multiprocessing
@@ -21,8 +22,18 @@ try:
 except ImportError:
   print('Couldn\'t import picamera: running as is for debug purposes.')
 
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
-                    level=logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s [%(processName)s] [%(levelname)-5.5s] %(message)s')
+
+rootLogger = logging.getLogger()
+rootLogger.setLevel(logging.DEBUG)
+fileHandler = logging.handlers.RotatingFileHandler(
+  filename='camera.log', maxBytes=0.1 * (10 ** 6), backupCount=5)
+fileHandler.setFormatter(formatter)
+rootLogger.addHandler(fileHandler)
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(formatter)
+rootLogger.addHandler(consoleHandler)
+
 logging.getLogger('googleapiclient.discovery').setLevel(logging.CRITICAL)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.CRITICAL)
 
@@ -30,6 +41,7 @@ VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
 CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
 MAX_VIDEO_SIZE = 500 * (10 ** 6)
+MIN_VIDEO_SIZE = 10 * (10 ** 6)
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
@@ -165,6 +177,8 @@ def watch():
         filename = os.path.join(VIDEODIR, video)
         if filename in [i.name for i in queue]:
           continue
+        if os.stat(filename).st_size < MIN_VIDEO_SIZE:
+          continue
         p = multiprocessing.Process(target=upload, name=filename, args=[filename])
         logging.debug('Starting background process %s', p)
         p.start()
@@ -226,7 +240,7 @@ def main():
   if not os.path.isdir(VIDEODIR):
     logging.debug('Creating directory %s', VIDEODIR)
     os.mkdir(VIDEODIR)
-  p = multiprocessing.Process(target=watch)
+  p = multiprocessing.Process(target=watch, name='watcher')
   logging.debug('Starting background process %s', p)
   p.start()
   record()
