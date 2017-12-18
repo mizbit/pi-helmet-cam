@@ -12,7 +12,7 @@ Based on similar implementation from [@nicolashahn](https://github.com/nicolasha
 - MicroSD card
   - get one of the 'high endurance' ones since this will be writing HD video constantly
 - Battery
-  - Simplest solution is a smartphone external battery pack with a microUSB cable (magnetic is the best option) and keep it in your jacket/backpack
+  - Simplest solution is a smartphone external battery pack with magnetic microUSB cable (WSKEN X-Cable Round in my case -- make sure it connects properly by itself) and keep it in your jacket/backpack
     ![sample](https://user-images.githubusercontent.com/193864/34119829-8479579c-e45e-11e7-94ac-1a94802c5b65.gif)
 - Camera housing/mounting
   - Cover both raspberry and camera with epoxy to make them resistant to water with electrical tape on top of it
