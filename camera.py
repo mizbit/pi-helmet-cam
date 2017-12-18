@@ -3,11 +3,10 @@
 """Recording script for a Raspberry Pi powered motorcycle helmet camera.
 """
 
+import os
 import picamera
 import datetime
-import os
 import shutil
-import sys
 import subprocess
 import logging
 import time
@@ -17,6 +16,9 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import httplib2
 
+
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
+                    level=logging.DEBUG)
 
 logging.getLogger('googleapiclient.discovery').setLevel(logging.CRITICAL)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.CRITICAL)
@@ -161,6 +163,8 @@ def main():
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     while True:
+      # TODO: try to stop recording when uploading is in progress.
+      # this way we could easily upload videos from home
       camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
       camera.split_recording(shard)
       camera.wait_recording(INTERVAL)
@@ -171,10 +175,6 @@ def main():
 
 
 if __name__ == '__main__':
-  if len(sys.argv) > 1:
-    if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
-      logging.basicConfig(level=logging.DEBUG)
-
   try:
     main()
   except KeyboardInterrupt:
