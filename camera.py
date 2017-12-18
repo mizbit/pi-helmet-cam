@@ -27,7 +27,8 @@ formatter = logging.Formatter('%(asctime)s [%(processName)s] [%(levelname)-5.5s]
 rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
 fileHandler = logging.handlers.RotatingFileHandler(
-  filename='camera.log', maxBytes=0.1 * (10 ** 6), backupCount=5)
+  filename=os.path.join(os.path.dirname(__file__), 'camera.log'),
+  maxBytes=0.1 * (10 ** 6), backupCount=5)
 fileHandler.setFormatter(formatter)
 rootLogger.addHandler(fileHandler)
 consoleHandler = logging.StreamHandler()
