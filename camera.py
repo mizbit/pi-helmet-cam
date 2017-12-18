@@ -212,7 +212,11 @@ class OutputShard(object):
 
 
 def record():
-  """Start recording after no connection is avilable and stop when connected.
+  """Start recording if/after no connection is avilable and stop when connected.
+
+  The idea is to stop recording so the upload can be completed without
+  generating any new videos, and you are very unlikely to need a recordding when
+  you are near WiFi anyway.
   """
   while is_connected():
     logging.debug('Still connected...')
