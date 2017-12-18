@@ -61,6 +61,8 @@ SPACE_CHECK_INTERVAL = 30
 # what % of disk space must be free to start a new video
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
 
+YOUTUBE_TITLE_PREFIX = 'Helmet Camera'
+
 queue = []
 
 
@@ -147,7 +149,10 @@ def upload(filename):
     logging.error('Unable to read .credentials file to perform youtube upload.')
     return
   service = build('youtube', 'v3', credentials=credentials)
-  body = dict(snippet=dict(title=filename, tags=['helmet'], categoryId=2),
+  title = '%s %s' % (
+    YOUTUBE_TITLE_PREFIX,
+    ':'.join(os.path.split(filename)[1][:-12].replace('_', ' ').rsplit('-', 1)))
+  body = dict(snippet=dict(title=title, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
   logging.debug('Preparing to upload %s...', filename)
   try:
