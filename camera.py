@@ -126,6 +126,7 @@ def make_room():
     logging.debug('No videos in directory %s, cannot make room', VIDEODIR)
 
 
+@throttle(seconds=SPACE_CHECK_INTERVAL)
 def enough_disk_space():
   """Return true if we have enough space to start a new video.
   """
