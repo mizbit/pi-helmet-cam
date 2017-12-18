@@ -90,13 +90,17 @@ def upload(filename):
   body = dict(snippet=dict(title=filename, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
   logging.debug('Preparing to upload %s...', filename)
-  result = service.videos().insert(
-    part=','.join(body.keys()),
-    body=body,
-    media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
-  ).execute()
-  logging.debug('Successfully uploaded %s', result)
-  os.remove(filename)
+  try:
+    result = service.videos().insert(
+      part=','.join(body.keys()),
+      body=body,
+      media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
+    ).execute()
+  except httplib2.ServerNotFoundError:
+    logging.debug('Couldn\'t upload %s since to connection is available.')
+  else:
+    logging.debug('Successfully uploaded %s', result)
+    os.remove(filename)
 
 
 def watch():
