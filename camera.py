@@ -218,6 +218,9 @@ def record():
   generating any new videos, and you are very unlikely to need a recordding when
   you are near WiFi anyway.
   """
+  with picamera.PiCamera() as camera:
+    # make sure that camera is connected
+    pass
   while is_connected():
     logging.debug('Still connected...')
     time.sleep(5)
