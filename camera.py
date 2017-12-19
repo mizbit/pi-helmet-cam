@@ -264,3 +264,5 @@ if __name__ == '__main__':
     main()
   except KeyboardInterrupt:
     exit('Command killed by keyboard interrupt')
+  except Exception as e:
+    logging.exception(e)
