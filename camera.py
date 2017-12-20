@@ -232,7 +232,7 @@ def record():
     logging.debug('Recording with %s@%s FPS', RESOLUTION, FRAMERATE)
     camera.annotate_background = picamera.Color('black')
     counter = 0
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     filename = os.path.join(VIDEODIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
