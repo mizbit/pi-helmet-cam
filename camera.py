@@ -142,9 +142,6 @@ def enough_disk_space():
 
 def upload(filename):
   """Upload given filename on YouTube using saved credentials.
-
-  Raises:
-    httplib2.ServerNotFoundError: When no connection is available.
   """
   try:
     credentials = pickle.load(open(CREDENTIALS))
@@ -152,9 +149,13 @@ def upload(filename):
     logging.error('Unable to read .credentials file to perform youtube upload.')
     return
   service = build('youtube', 'v3', credentials=credentials)
+  name_parts = os.path.split(filename)[1].split('.')
   title = '%s %s' % (
     YOUTUBE_TITLE_PREFIX,
-    ':'.join(os.path.split(filename)[1][:-12].replace('_', ' ').rsplit('-', 1)))
+    ':'.join(name_parts[0].replace('_', ' ').rsplit('-', 1)))
+  part_num = int(filename.split('.')[1])
+  if part_num:
+    title = '%s Part %s' % (title, part_num + 1)
   body = dict(snippet=dict(title=title, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
   logging.debug('Preparing to upload %s...', filename)
