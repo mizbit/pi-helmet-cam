@@ -48,6 +48,7 @@ MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
 VIDEO_MIN_INTERVALS = 60
 
 UPLOAD_CHUNK_SIZE = 50 * (10 ** 6)
+UPLOAD_MAX_WORKERS = 2
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
@@ -228,10 +229,11 @@ def watch():
           continue
         if os.stat(filename).st_size < MIN_VIDEO_SIZE:
           continue
-        p = multiprocessing.Process(target=upload, name=filename, args=[filename])
-        logging.debug('Starting background process %s', p)
-        p.start()
-        queue.append(p)
+        if len(queue) < UPLOAD_MAX_WORKERS:
+          p = multiprocessing.Process(target=upload, name=filename, args=[filename])
+          logging.debug('Starting background process %s', p)
+          p.start()
+          queue.append(p)
     time.sleep(SPACE_CHECK_INTERVAL)
 
 
