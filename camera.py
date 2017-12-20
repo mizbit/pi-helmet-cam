@@ -314,7 +314,7 @@ def record():
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
       if is_connected():
-        logging.info('Connected to WiFi. Not recording anymore. is_new %s, %s', shard.is_new, intervals_recorded)
+        logging.info('Connected to WiFi. Not recording anymore. %s is_new %s, %s', shard, shard.is_new, intervals_recorded)
         camera.stop_recording()
         shard.close()
         if shard.is_new and intervals_recorded < VIDEO_MIN_INTERVALS:
