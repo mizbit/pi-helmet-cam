@@ -40,6 +40,7 @@ Based on similar implementation from [@nicolashahn](https://github.com/nicolasha
 - Run `sudo crontab -e` and add this line to the bottom:
 
     ```bash
+    * * * * * /sbin/fake-hwclock save
     @reboot /home/pi/pi-helmet-cam/camera.py > /home/pi/pi-helmet-cam/cron.log 2>&1
     ```
 
