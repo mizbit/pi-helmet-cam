@@ -43,7 +43,7 @@ VIDEO_DIR = os.path.join(os.path.dirname(__file__), 'video')
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
-MAX_VIDEO_SIZE = 500 * (10 ** 6)
+MAX_VIDEO_SIZE = 5000 * (10 ** 6)  # ~45 minutes
 MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
 VIDEO_MIN_INTERVALS = 60
 
@@ -68,6 +68,8 @@ SPACE_CHECK_INTERVAL = 30
 REQUIRED_FREE_SPACE_PERCENT = 15  # about an hour with 64gb card
 
 YOUTUBE_TITLE_PREFIX = 'Helmet Camera'
+
+DATE_FORMAT = '%Y-%m-%d_%H-%M'
 
 queue = []
 
@@ -127,9 +129,9 @@ def make_room():
       os.remove(os.path.join(VIDEO_DIR, oldest_video))
     except OSError:
       logging.error('Must run as root otherwise script cannot clear out old videos')
-      exit(1)
   else:
-    logging.debug('No videos in directory %s, cannot make room', VIDEO_DIR)
+    logging.error('No videos in directory %s, cannot make room', VIDEO_DIR)
+    time.sleep(SPACE_CHECK_INTERVAL)
 
 
 @throttle(seconds=SPACE_CHECK_INTERVAL)
@@ -240,6 +242,7 @@ def watch():
 class OutputShard(object):
   def __init__(self, filename):
     self.filename = filename
+    self.is_new = self.size == 0
     self.stream = open(filename, 'ab')
 
   def __repr__(self):
@@ -256,7 +259,10 @@ class OutputShard(object):
 
   @property
   def size(self):
-    return os.stat(self.filename).st_size
+    try:
+      return os.stat(self.filename).st_size
+    except OSError:
+      return 0
 
 
 def record():
@@ -270,8 +276,21 @@ def record():
     # make sure that camera is connected
     pass
   while is_connected():
-    logging.debug('Still connected...')
+    logging.debug('Still connected to the network...')
     time.sleep(5)
+
+  now = datetime.datetime.now()
+  # guard against writing into old files if system time is incorrect
+  old_videos = [datetime.datetime.strptime(
+    i.split('.')[0], DATE_FORMAT) for i in sorted(os.listdir(VIDEO_DIR))]
+  for old_video in old_videos:
+    if old_video >= now:
+      shards = len([i for i in old_videos if i == old_video])
+      if shards > 1:
+        logging.critical('Existing video file %s is newer from current time %s. This is likely caused by incorrent system time. Trying again shortly...', old_video, now)
+        time.sleep(10)
+        return record()
+
   with picamera.PiCamera() as camera:
     camera.resolution = RESOLUTION
     camera.framerate = FRAMERATE
@@ -279,7 +298,7 @@ def record():
     logging.debug('Recording with %s@%s FPS', RESOLUTION, FRAMERATE)
     camera.annotate_background = picamera.Color('black')
     counter = 0
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    timestamp = now.strftime(DATE_FORMAT)
     filename = os.path.join(VIDEO_DIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
@@ -294,21 +313,20 @@ def record():
       if shard.size > MAX_VIDEO_SIZE:
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
-      shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
       if is_connected():
         logging.info('Connected to WiFi. Not recording anymore.')
         camera.stop_recording()
         shard.close()
-        if intervals_recorded < VIDEO_MIN_INTERVALS:
+        if shard.is_new and intervals_recorded < VIDEO_MIN_INTERVALS:
           logging.debug('Cleaning up short video %s', shard)
           shard.remove()
         break
+      shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
   logging.info('Trying to start recording again...')
   record()
 
 
 def main():
-  # TODO: sometimes TIME is fucked up and we move into the past when powered on
   logging.info('Powered on at %s', datetime.datetime.now())
   if not os.path.isdir(VIDEO_DIR):
     logging.debug('Creating directory %s', VIDEO_DIR)
