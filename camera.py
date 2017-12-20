@@ -4,16 +4,17 @@
 """
 
 import os
+import json
 import datetime
-import shutil
 import subprocess
 import logging
 import logging.handlers
 import time
 import pickle
 import multiprocessing
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+import googleapiclient.discovery
+import googleapiclient.http
+import googleapiclient.model
 import httplib2
 import functools
 import socket
@@ -38,11 +39,15 @@ rootLogger.addHandler(consoleHandler)
 logging.getLogger('googleapiclient.discovery').setLevel(logging.CRITICAL)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.CRITICAL)
 
-VIDEODIR = os.path.join(os.path.dirname(__file__), 'video')
+VIDEO_DIR = os.path.join(os.path.dirname(__file__), 'video')
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
 MAX_VIDEO_SIZE = 500 * (10 ** 6)
 MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
+VIDEO_MIN_INTERVALS = 60
+
+UPLOAD_CHUNK_SIZE = 50 * (10 ** 6)
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
@@ -112,18 +117,18 @@ def is_connected(host='8.8.8.8', port=53, timeout=1):
 def make_room():
   """Clear oldest video.
   """
-  sorted_videos = sorted(os.listdir(VIDEODIR))
+  sorted_videos = sorted(os.listdir(VIDEO_DIR))
   if sorted_videos:
     oldest_video = sorted_videos[0]
     logging.debug('Removing oldest video: %s', oldest_video)
     # may not have permission if running as pi and video was created by root
     try:
-      shutil.rmtree(os.path.join(VIDEODIR, oldest_video))
+      os.remove(os.path.join(VIDEO_DIR, oldest_video))
     except OSError:
       logging.error('Must run as root otherwise script cannot clear out old videos')
       exit(1)
   else:
-    logging.debug('No videos in directory %s, cannot make room', VIDEODIR)
+    logging.debug('No videos in directory %s, cannot make room', VIDEO_DIR)
 
 
 @throttle(seconds=SPACE_CHECK_INTERVAL)
@@ -141,13 +146,18 @@ def enough_disk_space():
 
 def upload(filename):
   """Upload given filename on YouTube using saved credentials.
+
+  For each video file we will create a JSON file in `uploads` dir with upload
+  progress. This way we can resume upload if it was interrupted and avoid
+  duplicates.
   """
   try:
     credentials = pickle.load(open(CREDENTIALS))
   except IOError:
     logging.error('Unable to read .credentials file to perform youtube upload.')
     return
-  service = build('youtube', 'v3', credentials=credentials)
+  service = googleapiclient.discovery.build(
+    'youtube', 'v3', credentials=credentials)
   name_parts = os.path.split(filename)[1].split('.')
   title = '%s %s' % (
     YOUTUBE_TITLE_PREFIX,
@@ -158,17 +168,46 @@ def upload(filename):
   body = dict(snippet=dict(title=title, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
   logging.debug('Preparing to upload %s...', filename)
+  request = service.videos().insert(
+    part=','.join(body.keys()),
+    body=body,
+    media_body=googleapiclient.http.MediaFileUpload(
+      filename, chunksize=UPLOAD_CHUNK_SIZE, resumable=True)
+  )
+  progress_filename = os.path.join(UPLOADS_DIR, '%s.json' % os.path.split(
+    filename)[1])
   try:
-    result = service.videos().insert(
-      part=','.join(body.keys()),
-      body=body,
-      media_body=MediaFileUpload(filename, chunksize=-1, resumable=True)
-    ).execute()
+    with open(progress_filename) as f:
+      progress = json.load(f)
+  except IOError:
+    progress = None
+  if progress is not None:
+    logging.debug('Resuming existing upload from %s...', progress_filename)
+    request.resumable_progress = progress['resumable_progress']
+    request.resumable_uri = progress['resumable_uri']
+  response = None
+  try:
+    _prev_percent = 0
+    while response is None:
+      status, response = request.next_chunk(num_retries=3)
+      if status:
+        with open(progress_filename, 'w') as f:
+          json.dump({
+            'resumable_progress': request.resumable_progress,
+            'resumable_uri': request.resumable_uri}, f)
+        _percent = status.progress()
+        if _percent - _prev_percent > 0.1:
+          logging.debug('Uploading at [%s%%]', '{:.2%}'.format(_percent))
+          _prev_percent = _percent
   except httplib2.ServerNotFoundError:
     logging.debug('Couldn\'t upload %s since no connection is available.')
   else:
-    logging.debug('Successfully uploaded %s', result)
+    logging.debug('Successfully uploaded %s', response)
     os.remove(filename)
+    try:
+      os.remove(progress_filename)
+    except OSError:
+      pass
 
 
 def watch():
@@ -183,8 +222,8 @@ def watch():
       logging.debug('Upload queue: %s', queue)
 
     if is_connected():
-      for video in sorted(os.listdir(VIDEODIR)):
-        filename = os.path.join(VIDEODIR, video)
+      for video in sorted(os.listdir(VIDEO_DIR)):
+        filename = os.path.join(VIDEO_DIR, video)
         if filename in [i.name for i in queue]:
           continue
         if os.stat(filename).st_size < MIN_VIDEO_SIZE:
@@ -201,11 +240,17 @@ class OutputShard(object):
     self.filename = filename
     self.stream = open(filename, 'ab')
 
+  def __repr__(self):
+    return '<OutputShard:%s>' % self.filename
+
   def write(self, buf):
     self.stream.write(buf)
 
   def close(self):
     self.stream.close()
+
+  def remove(self):
+    os.remove(self.filename)
 
   @property
   def size(self):
@@ -233,7 +278,7 @@ def record():
     camera.annotate_background = picamera.Color('black')
     counter = 0
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
-    filename = os.path.join(VIDEODIR, '%s.{}.%s' % (timestamp, FORMAT))
+    filename = os.path.join(VIDEO_DIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     intervals_recorded = 0
@@ -252,16 +297,23 @@ def record():
         logging.info('Connected to WiFi. Not recording anymore.')
         camera.stop_recording()
         shard.close()
+        if intervals_recorded < VIDEO_MIN_INTERVALS:
+          logging.debug('Cleaning up short video %s', shard)
+          shard.remove()
         break
   logging.info('Trying to start recording again...')
   record()
 
 
 def main():
+  # TODO: sometimes TIME is fucked up and we move into the past when powered on
   logging.info('Powered on at %s', datetime.datetime.now())
-  if not os.path.isdir(VIDEODIR):
-    logging.debug('Creating directory %s', VIDEODIR)
-    os.mkdir(VIDEODIR)
+  if not os.path.isdir(VIDEO_DIR):
+    logging.debug('Creating directory %s', VIDEO_DIR)
+    os.mkdir(VIDEO_DIR)
+  if not os.path.isdir(UPLOADS_DIR):
+    logging.debug('Creating directory %s', UPLOADS_DIR)
+    os.mkdir(UPLOADS_DIR)
   p = multiprocessing.Process(target=watch, name='watcher')
   logging.debug('Starting background process %s', p)
   p.start()
