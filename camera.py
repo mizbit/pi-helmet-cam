@@ -134,9 +134,8 @@ def enough_disk_space():
   output = df.communicate()[0]
   percent_used_str = output.split("\n")[1].split()[4]
   percent_used = int(percent_used_str.replace('%', ''))
-  logging.debug('%s%% of disk space used.', percent_used)
   enough = 100 >= REQUIRED_FREE_SPACE_PERCENT + percent_used
-  logging.debug('Enough space to start new video: %s', enough)
+  logging.debug('%s%% of disk space used. Enough: %s', percent_used, enough)
   return enough
 
 
@@ -180,7 +179,8 @@ def watch():
       make_room()
     for i in reversed([i for i, p in enumerate(queue) if not p.is_alive()]):
       queue.pop(i)
-    logging.debug('Upload queue: %s', queue)
+    if queue:
+      logging.debug('Upload queue: %s', queue)
 
     if is_connected():
       for video in sorted(os.listdir(VIDEODIR)):
