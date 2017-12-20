@@ -236,10 +236,14 @@ def record():
     filename = os.path.join(VIDEODIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
+    intervals_recorded = 0
     while True:
       camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
       camera.split_recording(shard)
       camera.wait_recording(INTERVAL)
+      intervals_recorded += 1
+      if intervals_recorded % 10 == 0:
+        logging.debug('Recorded %s intervals...', intervals_recorded)
       if shard.size > MAX_VIDEO_SIZE:
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
