@@ -254,6 +254,7 @@ def record():
 
 
 def main():
+  logging.info('Powered on at %s', datetime.datetime.now())
   if not os.path.isdir(VIDEODIR):
     logging.debug('Creating directory %s', VIDEODIR)
     os.mkdir(VIDEODIR)
