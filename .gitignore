@@ -2,4 +2,5 @@
 .credentials
 client_secret.json
 video
+uploads
 *.log
