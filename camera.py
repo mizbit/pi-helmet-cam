@@ -319,7 +319,7 @@ def record():
         camera.stop_recording()
         shard.close()
         if is_new and intervals_recorded < VIDEO_MIN_INTERVALS:
-          logging.debug('Cleaning up short video %s', shard)
+          logging.debug('Cleaning up short video %s (%s intervals)', shard, intervals_recorded)
           shard.remove()
         break
       shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
