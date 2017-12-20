@@ -301,6 +301,7 @@ def record():
     timestamp = now.strftime(DATE_FORMAT)
     filename = os.path.join(VIDEO_DIR, '%s.{}.%s' % (timestamp, FORMAT))
     shard = OutputShard(filename.format(str(counter).zfill(ZFILL_DECIMAL)))
+    is_new = shard.is_new
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     intervals_recorded = 0
     while True:
@@ -314,10 +315,10 @@ def record():
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
       if is_connected():
-        logging.info('Connected to WiFi. Not recording anymore. %s is_new %s, %s', shard, shard.is_new, intervals_recorded)
+        logging.info('Connected to WiFi. Not recording anymore.')
         camera.stop_recording()
         shard.close()
-        if shard.is_new and intervals_recorded < VIDEO_MIN_INTERVALS:
+        if is_new and intervals_recorded < VIDEO_MIN_INTERVALS:
           logging.debug('Cleaning up short video %s', shard)
           shard.remove()
         break
