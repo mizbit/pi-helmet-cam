@@ -200,7 +200,7 @@ def upload(filename):
             'resumable_uri': request.resumable_uri}, f)
         _percent = status.progress()
         if _percent - _prev_percent > 0.1:
-          logging.debug('Uploading at [%s%%]', '{:.2%}'.format(_percent))
+          logging.debug('Uploading at [%s]', '{:.2%}'.format(_percent))
           _prev_percent = _percent
   except httplib2.ServerNotFoundError:
     logging.debug('Couldn\'t upload %s since no connection is available.')
