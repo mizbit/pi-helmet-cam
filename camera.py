@@ -28,7 +28,7 @@ rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
 fileHandler = logging.handlers.RotatingFileHandler(
   filename=os.path.join(os.path.dirname(__file__), 'camera.log'),
-  maxBytes=0.1 * (10 ** 6), backupCount=5)
+  maxBytes=0.5 * (10 ** 6), backupCount=3)
 fileHandler.setFormatter(formatter)
 rootLogger.addHandler(fileHandler)
 consoleHandler = logging.StreamHandler()
