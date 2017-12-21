@@ -199,7 +199,7 @@ def upload(filename):
             'resumable_progress': request.resumable_progress,
             'resumable_uri': request.resumable_uri}, f)
         _percent = status.progress()
-        if _percent - _prev_percent > 0.1:
+        if _percent - _prev_percent > 0.01:
           logging.debug('Uploading at [%s]', '{:.2%}'.format(_percent))
           _prev_percent = _percent
   except httplib2.ServerNotFoundError:
