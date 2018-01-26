@@ -45,7 +45,7 @@ CREDENTIALS = os.path.join(os.path.dirname(__file__), '.credentials')
 FORMAT = 'h264'
 MAX_VIDEO_SIZE = 5000 * (10 ** 6)  # ~45 minutes
 MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
-VIDEO_MIN_INTERVALS = 60
+VIDEO_MIN_INTERVALS = 12
 
 UPLOAD_CHUNK_SIZE = 50 * (10 ** 6)
 UPLOAD_MAX_WORKERS = 2
@@ -59,7 +59,7 @@ FRAMERATE = 30
 STABILIZATION = False
 
 # number of seconds to flush on disk
-INTERVAL = 1
+INTERVAL = 5
 
 # check for enough disk space every N seconds
 SPACE_CHECK_INTERVAL = 30
