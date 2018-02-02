@@ -29,7 +29,7 @@ rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
 fileHandler = logging.handlers.RotatingFileHandler(
   filename=os.path.join(os.path.dirname(__file__), 'camera.log'),
-  maxBytes=0.5 * (10 ** 6), backupCount=1)
+  maxBytes=1 * (10 ** 6), backupCount=1)
 fileHandler.setFormatter(formatter)
 rootLogger.addHandler(fileHandler)
 consoleHandler = logging.StreamHandler()
@@ -275,9 +275,12 @@ def record():
   with picamera.PiCamera() as camera:
     # make sure that camera is connected
     pass
+  should_log = True
   while is_connected():
-    logging.debug('Still connected to the network...')
+    if should_log:
+      logging.debug('Still connected to the network...')
     time.sleep(5)
+    should_log = False
 
   now = datetime.datetime.now()
   # guard against writing into old files if system time is incorrect
@@ -305,7 +308,7 @@ def record():
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     intervals_recorded = 0
     while True:
-      camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+      camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
       camera.split_recording(shard)
       camera.wait_recording(INTERVAL)
       intervals_recorded += 1
