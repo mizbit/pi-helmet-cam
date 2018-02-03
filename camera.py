@@ -136,7 +136,7 @@ def make_room():
 
 def measure_temp():
   temp = os.popen('vcgencmd measure_temp').readline()
-  return temp.replace('temp=', '')
+  return temp.replace('temp=', '').strip()
 
 
 @throttle(seconds=SPACE_CHECK_INTERVAL)
