@@ -217,11 +217,11 @@ def upload(filename):
     logging.debug('Couldn\'t upload %s since no connection is available.')
   else:
     logging.debug('Successfully uploaded %s', response)
-    os.remove(filename)
     try:
       os.remove(progress_filename)
     except OSError:
       pass
+    os.remove(filename)
 
 
 def watch():
