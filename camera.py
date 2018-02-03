@@ -134,6 +134,11 @@ def make_room():
     time.sleep(SPACE_CHECK_INTERVAL)
 
 
+def measure_temp():
+  temp = os.popen('vcgencmd measure_temp').readline()
+  return temp.replace('temp=', '')
+
+
 @throttle(seconds=SPACE_CHECK_INTERVAL)
 def enough_disk_space():
   """Return true if we have enough space to start a new video.
@@ -144,6 +149,7 @@ def enough_disk_space():
   percent_used = int(percent_used_str.replace('%', ''))
   enough = 100 >= REQUIRED_FREE_SPACE_PERCENT + percent_used
   logging.debug('%s%% of disk space used. Enough: %s', percent_used, enough)
+  logging.debug('Device temperature: %s', measure_temp())
   return enough
 
 
