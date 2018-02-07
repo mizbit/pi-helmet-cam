@@ -229,6 +229,7 @@ def watch():
   while True:
     while not enough_disk_space():
       make_room()
+      time.sleep(1)
     for i in reversed([i for i, p in enumerate(queue) if not p.is_alive()]):
       queue.pop(i)
     if queue:
