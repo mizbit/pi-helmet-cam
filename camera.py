@@ -139,7 +139,6 @@ def measure_temp():
   return temp.replace('temp=', '').strip()
 
 
-@throttle(seconds=SPACE_CHECK_INTERVAL)
 def enough_disk_space():
   """Return true if we have enough space to start a new video.
   """
