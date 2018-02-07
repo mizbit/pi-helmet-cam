@@ -48,7 +48,7 @@ MIN_VIDEO_SIZE = 50 * (10 ** 6)  # ~30 seconds
 VIDEO_MIN_INTERVALS = 12
 
 UPLOAD_CHUNK_SIZE = 50 * (10 ** 6)
-UPLOAD_MAX_WORKERS = 2
+UPLOAD_MAX_WORKERS = 1
 
 # how many 0s to put in front of counter number
 ZFILL_DECIMAL = 3
