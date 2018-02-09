@@ -189,6 +189,10 @@ def upload(filename):
       progress = json.load(f)
   except IOError:
     progress = None
+  except ValueError:
+    logging.warning('Invalid upload progress in %s', progress_filename)
+    os.remove(progress_filename)
+    progress = None
   if progress is not None:
     logging.debug('Resuming existing upload from %s...', progress_filename)
     request.resumable_progress = progress['resumable_progress']
