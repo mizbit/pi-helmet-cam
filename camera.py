@@ -134,7 +134,7 @@ def make_room():
   sorted_videos = sorted(os.listdir(VIDEO_DIR))
   if sorted_videos:
     oldest_video = sorted_videos[0]
-    logging.debug('Removing oldest video: %s', oldest_video)
+    logging.info('Removing oldest video: %s', oldest_video)
     # may not have permission if running as pi and video was created by root
     try:
       os.remove(os.path.join(VIDEO_DIR, oldest_video))
@@ -186,7 +186,7 @@ def upload(filename):
     title = '%s Part %s' % (title, part_num + 1)
   body = dict(snippet=dict(title=title, tags=['helmet'], categoryId=2),
               status=dict(privacyStatus='unlisted'))
-  logging.debug('Preparing to upload %s...', filename)
+  logging.info('Preparing to upload %s...', filename)
   request = service.videos().insert(
     part=','.join(body.keys()),
     body=body,
@@ -205,7 +205,7 @@ def upload(filename):
     os.remove(progress_filename)
     progress = None
   if progress is not None:
-    logging.debug('Resuming existing upload from %s...', progress_filename)
+    logging.info('Resuming existing upload from %s...', progress_filename)
     request.resumable_progress = progress['resumable_progress']
     request.resumable_uri = progress['resumable_uri']
   response = None
@@ -220,7 +220,7 @@ def upload(filename):
             'resumable_uri': request.resumable_uri}, f)
         _percent = status.progress()
         if _percent - _prev_percent > 0.01:
-          logging.debug('Uploading at [%s]', '{:.2%}'.format(_percent))
+          logging.info('Uploading at [%s]', '{:.2%}'.format(_percent))
           _prev_percent = _percent
   except googleapiclient.errors.HttpError as e:
     if 'The number of bytes uploaded' in e.content:
@@ -230,7 +230,7 @@ def upload(filename):
   except httplib2.ServerNotFoundError:
     logging.debug('Couldn\'t upload %s since no connection is available.')
   else:
-    logging.debug('Successfully uploaded %s', response)
+    logging.info('Successfully uploaded %s', response)
     try:
       os.remove(progress_filename)
     except OSError:
