@@ -22,17 +22,7 @@ try:
   import picamera
 except ImportError:
   print('Couldn\'t import picamera: running as is for debug purposes.')
-import google.cloud.logging
-import google.auth
 
-
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(
-  os.path.dirname(__file__), 'service_secret.json')
-
-try:
-  google.cloud.logging.Client().setup_logging()
-except google.auth.exceptions.DefaultCredentialsError as e:
-  logging.warn('Cannot setup cloud logging: %s', e)
 
 formatter = logging.Formatter('%(asctime)s [%(processName)s] [%(levelname)-5.5s] %(message)s')
 
