@@ -218,6 +218,7 @@ def upload(filename):
       logging.info('Removing upload progress and starting again.')
       os.remove(progress_filename)
     else:
+      logging.error('Unknown upload error with: %s', e.content)
       raise googleapiclient.errors.HttpError(e.resp, e.content)
   except httplib2.ServerNotFoundError:
     logging.debug('Couldn\'t upload %s since no connection is available.')
