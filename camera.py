@@ -213,12 +213,11 @@ def upload(filename):
           logging.info('Uploading at [%s]', '{:.2%}'.format(_percent))
           _prev_percent = _percent
   except googleapiclient.errors.HttpError as e:
-    if 'The number of bytes uploaded' in e.content:
+    if 'The number of bytes uploaded' in e.content or e.resp.status == 404:
       logging.warning(e.content)
       logging.info('Removing upload progress and starting again.')
       os.remove(progress_filename)
     else:
-      logging.error('Unknown upload error with: %s', e.content)
       raise googleapiclient.errors.HttpError(e.resp, e.content)
   except httplib2.ServerNotFoundError:
     logging.debug('Couldn\'t upload %s since no connection is available.')
