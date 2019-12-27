@@ -309,20 +309,20 @@ def record():
     # make sure that camera is connected
     pass
   should_log = True
+  is_led_on = False
   while is_connected():
     if should_log:
       logging.debug('Still connected to the network...')
     # blink the LED once in a while to know that we are ready to record
     # blink every second for first 5 minutes, then once in 5 seconds
     if uptime() < 60 * 5:
-      for _ in range(5):
-        use_led(True)
+      for i in range(5):
+        use_led(bool(i % 2))
         time.sleep(1)
-        use_led(False)
     else:
-      use_led(True)
+      use_led(is_led_on)
+      is_led_on = not is_led_on
       time.sleep(5)
-      use_led(False)
 
     should_log = False
 
