@@ -103,6 +103,13 @@ class throttle(object):
     return wrapper
 
 
+def use_led(status):
+  """Control on-board green LED status, True for on, False for off.
+  """
+  with open('/sys/class/leds/led0/brightness', 'w') as f:
+    f.write('%s\n' % int(not status))
+
+
 @throttle(seconds=5)
 def is_connected(host='8.8.8.8', port=53, timeout=1):
   """Returns True if we have internet connection.
@@ -297,7 +304,11 @@ def record():
   while is_connected():
     if should_log:
       logging.debug('Still connected to the network...')
-    time.sleep(5)
+    time.sleep(4)
+    # blink the LED once in a while to know that we are ready to record
+    use_led(True)
+    time.sleep(1)
+    use_led(False)
     should_log = False
 
   now = datetime.datetime.now()
@@ -325,6 +336,7 @@ def record():
     is_new = shard.is_new
     camera.start_recording(shard, format=FORMAT, intra_period=INTERVAL * FRAMERATE)
     intervals_recorded = 0
+    use_led(True)
     while True:
       camera.annotate_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
       camera.split_recording(shard)
@@ -336,6 +348,7 @@ def record():
         counter += 1
         logging.debug('Using next shard %s for video file', counter)
       if is_connected():
+        use_led(False)
         logging.info('Connected to WiFi. Not recording anymore.')
         camera.stop_recording()
         shard.close()
@@ -350,6 +363,11 @@ def record():
 
 def main():
   logging.info('Powered on at %s', datetime.datetime.now())
+
+  # Set the PWR LED to GPIO mode (set 'off' by default)
+  with open('/sys/class/leds/led0/trigger', 'w') as f:
+    f.write('gpio\n')
+
   if not os.path.isdir(VIDEO_DIR):
     logging.debug('Creating directory %s', VIDEO_DIR)
     os.mkdir(VIDEO_DIR)

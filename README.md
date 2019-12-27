@@ -33,11 +33,12 @@ Based on similar implementation from [@nicolashahn](https://github.com/nicolasha
 - Configure and copy `wpa_supplicant.conf` file to setup wireless network
 - Plug in the card and you should be ready to connect by e.g. `ssh pi@192.168.1.4` (lookup the IP using `arp -a` or something) with default password being `raspberry`
 - Use `sudo raspi-config` to enable camera interface and change your password
+- Optionally copy a public key from your local machine `ssh-copy-id pi@192.168.1.4`
 - `sudo apt-get update`
 - Install git `sudo apt-get install -y git`
 - Clone this repo `git clone https://github.com/sadovnychyi/pi-helmet-cam.git`
 - Generate `client_secret.json` from [Google Cloud Console](https://console.cloud.google.com/apis/credentials/oauthclient) (select 'Other' as application type) and click download JSON
-- Copy `client_secret.json` onto your raspberry in project folder
+- Copy `client_secret.json` onto your raspberry in project folder `scp client_secret.json pi@192.168.1.4:~/pi-helmet-cam`
 - Run `make` from project folder – this will install dependencies and generate credentials based on your app secrets
 - Run `sudo crontab -e` and add this line to the bottom:
 
