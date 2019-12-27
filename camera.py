@@ -72,6 +72,8 @@ YOUTUBE_TITLE_PREFIX = 'Helmet Camera'
 
 DATE_FORMAT = '%Y-%m-%d_%H-%M'
 
+START_TIME = time.time()
+
 queue = []
 
 
@@ -290,6 +292,12 @@ class OutputShard(object):
       return 0
 
 
+def uptime():
+  """Get current uptime in seconds.
+  """
+  return time.time() - START_TIME
+
+
 def record():
   """Start recording if/after no connection is avilable and stop when connected.
 
@@ -304,11 +312,18 @@ def record():
   while is_connected():
     if should_log:
       logging.debug('Still connected to the network...')
-    time.sleep(4)
     # blink the LED once in a while to know that we are ready to record
-    use_led(True)
-    time.sleep(1)
-    use_led(False)
+    # blink every second for first 5 minutes, then once in 5 seconds
+    if uptime() < 60 * 5:
+      for _ in range(5):
+        use_led(True)
+        time.sleep(1)
+        use_led(False)
+    else:
+      use_led(True)
+      time.sleep(5)
+      use_led(False)
+
     should_log = False
 
   now = datetime.datetime.now()
