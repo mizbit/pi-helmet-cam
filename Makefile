@@ -3,7 +3,7 @@
 all:
 	sudo apt-get install -y fake-hwclock
 	sudo curl https://bootstrap.pypa.io/get-pip.py | sudo python
-	sudo pip install picamera google_auth_oauthlib google-api-python-client google-auth-httplib2
+	sudo pip install picamera google_auth_oauthlib google-api-python-client google-auth-httplib2 "httplib2<0.16.0"
 	make credentials
 
 credentials:
